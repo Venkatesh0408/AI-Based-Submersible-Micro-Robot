@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { AlertTriangle, CheckCircle, Activity, Target, Shield, Clock } from "lucide-react";
+import { safeFetchJson } from "../services/api";
 
 function InspectionPanel() {
   const [latestItem, setLatestItem] = useState(null);
@@ -7,14 +8,8 @@ function InspectionPanel() {
   useEffect(() => {
       async function fetchLatest() {
           try {
-              const res = await fetch("/api/analysis-history");
-              if (!res.ok) return;
-              const contentType = res.headers.get("content-type") || "";
-              if (!contentType.includes("application/json")) return;
-              const text = await res.text();
-              if (!text || text.trim().startsWith("<")) return;
-              const data = JSON.parse(text);
-              if (data && data.length > 0) {
+              const data = await safeFetchJson("/api/analysis-history");
+              if (data && Array.isArray(data) && data.length > 0) {
                   setLatestItem(data[0]);
               }
           } catch(e) {
@@ -22,7 +17,7 @@ function InspectionPanel() {
           }
       }
       fetchLatest();
-      const interval = setInterval(fetchLatest, 3000);
+      const interval = setInterval(fetchLatest, 10000);
       return () => clearInterval(interval);
   }, []);
 

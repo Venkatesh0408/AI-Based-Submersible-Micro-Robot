@@ -47,7 +47,7 @@ export default function Statistics() {
      }
      
      fetchHistory();
-     const interval = setInterval(fetchHistory, 3000);
+     const interval = setInterval(fetchHistory, 15000);
      return () => clearInterval(interval);
   }, []);
 

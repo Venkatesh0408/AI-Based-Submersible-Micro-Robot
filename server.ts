@@ -78,7 +78,7 @@ app.use(express.json({ limit: "500mb" }));
 app.use(express.urlencoded({ extended: true, limit: "500mb" }));
 
 const windowMs = parseInt(process.env.RATE_LIMIT_WINDOW_MS || "900000");
-const maxRequests = parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || "10000");
+const maxRequests = 10000; // Hardcoded to prevent interval fetch drops
 
 const generalLimiter = rateLimit({
   windowMs,
@@ -1364,7 +1364,10 @@ const loginLimiter = rateLimit({
     message: { success: false, message: "Too many login attempts, please try again later." }
 });
 
-app.post("/api/auth/login", loginLimiter, async (req, res) => {
+app.all("/api/auth/login", loginLimiter, async (req, res) => {
+    if (req.method !== 'POST') {
+        return res.status(405).json({ success: false, message: "Method Not Allowed" });
+    }
     try {
         const { username, password } = req.body;
         if (!username || !password) {

@@ -105,7 +105,7 @@ export default function MissionAnalytics() {
 
         loadData();
 
-        const timer = setInterval(loadData, 1000);
+        const timer = setInterval(loadData, 5000);
 
         return () => clearInterval(timer);
 

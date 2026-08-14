@@ -24,7 +24,7 @@ export default function Dashboard() {
             }
         }
         loadData();
-        const timer = setInterval(loadData, 2000);
+        const timer = setInterval(loadData, 10000);
         return () => clearInterval(timer);
     }, []);
 

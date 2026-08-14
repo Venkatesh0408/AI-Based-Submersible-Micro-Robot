@@ -1,6 +1,6 @@
 const BASE_URL = "";
 
-async function safeFetchJson(url, options = {}) {
+export async function safeFetchJson(url, options = {}) {
     try {
         const res = await fetch(url, options);
         if (!res.ok) {

@@ -20,7 +20,7 @@ export default function HealthPanel() {
       }
     }
     loadHealth();
-    const timer = setInterval(loadHealth, 3000);
+    const timer = setInterval(loadHealth, 10000);
     return () => clearInterval(timer);
   }, []);
 
