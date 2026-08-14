@@ -3,11 +3,13 @@ services:
     name: submersible-micro-robot
     env: node
     plan: free
-    buildCommand: npm run build
+    buildCommand: npm install && npm run build
     startCommand: npm start
     envVars:
       - key: NODE_ENV
         value: production
+      - key: NPM_CONFIG_PRODUCTION
+        value: "false"
       - key: GEMINI_API_KEY
         sync: false
       - key: JWT_SECRET
