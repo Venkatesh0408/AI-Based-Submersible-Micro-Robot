@@ -368,8 +368,8 @@ export default function Main() {
 
                 </div>
                 
-                <div className="flex justify-center w-full mt-4 cursor-pointer" onClick={() => navigate('/login')}>
-                    <span className="text-red-400 text-xs sm:text-sm font-bold tracking-[0.3em] uppercase drop-shadow-[0_0_5px_rgba(255,42,75,0.5)] bg-red-950/60 px-6 py-3 rounded-full border border-red-500/50 hover:bg-red-800/50 hover:text-white transition-all hover:scale-105 active:scale-95 animate-pulse hover:animate-none">
+                <div className="flex justify-center items-center text-center w-full mt-6 mb-4 cursor-pointer" onClick={() => navigate('/login')}>
+                    <span className="text-red-400 text-xs sm:text-sm font-bold tracking-[0.3em] uppercase drop-shadow-[0_0_15px_rgba(255,42,75,0.7)] bg-red-950/80 px-8 py-4 rounded-full border border-red-500/60 hover:bg-red-800/60 hover:text-white transition-all hover:scale-105 active:scale-95 animate-levitate mx-auto flex items-center justify-center text-center shadow-[0_0_25px_rgba(255,42,75,0.4)]">
                         Press [ENTER] to initialise mission control
                     </span>
                 </div>

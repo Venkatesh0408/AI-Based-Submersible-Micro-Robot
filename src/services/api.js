@@ -67,16 +67,24 @@ export async function deleteMedia(filename) {
     });
 }
 
-export async function pingRaspberryPi(streamUrl) {
-    return await safeFetchJson(`${BASE_URL}/api/rpi-ping?url=${encodeURIComponent(streamUrl)}`);
+export async function pingEspCam(streamUrl) {
+    return await safeFetchJson(`${BASE_URL}/api/esp-ping?url=${encodeURIComponent(streamUrl)}`);
 }
 
-export async function captureRpiSnapshot(streamUrl, filename) {
-    return await safeFetchJson(`${BASE_URL}/api/rpi-snapshot`, {
+export async function pingRaspberryPi(streamUrl) {
+    return await pingEspCam(streamUrl);
+}
+
+export async function captureEspSnapshot(streamUrl, filename) {
+    return await safeFetchJson(`${BASE_URL}/api/esp-snapshot`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url: streamUrl, filename })
     });
+}
+
+export async function captureRpiSnapshot(streamUrl, filename) {
+    return await captureEspSnapshot(streamUrl, filename);
 }
 
 // ======================================================
@@ -111,6 +119,22 @@ export async function getGPS(){
     return await safeFetchJson(`${BASE_URL}/api/gps`);
 }
 
+export async function updateGpsPosition(data){
+    return await safeFetchJson(`${BASE_URL}/api/gps`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+    });
+}
+
+export async function searchMapsGrounding(query, latitude, longitude) {
+    return await safeFetchJson(`${BASE_URL}/api/maps-grounding`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query, latitude, longitude })
+    });
+}
+
 // ======================================================
 // AI DETECTION
 // ======================================================
@@ -131,14 +155,6 @@ export async function captureImage(){
     return await safeFetchJson(`${BASE_URL}/capture`, {
         method: "POST"
     });
-}
-
-// ======================================================
-// ESP32
-// ======================================================
-
-export async function getESP32(){
-    return await safeFetchJson(`${BASE_URL}/api/esp32`);
 }
 
 // ======================================================

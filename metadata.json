@@ -1,6 +1,6 @@
 {
   "name": "Submersible Micro Robot",
-  "description": "AI Powered Underwater Inspection & Mission Control System. Features real-time ESP32-CAM video, AI defect detection, GPS route planning, and live telemetry for water tanks, pipelines, and confined underwater environments.",
+  "description": "AI Powered Underwater Inspection & Mission Control System. Features real-time Raspberry Pi camera video, AI defect detection, GPS route planning, and live telemetry for water tanks, pipelines, and confined underwater environments.",
   "requestFramePermissions": [
     "geolocation",
     "camera"

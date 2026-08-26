@@ -4,6 +4,7 @@ import { useMission } from "../context/MissionContext";
 import Gallery from "../components/Gallery";
 import Header from "../components/Header";
 import DetectionPanel from "../components/DetectionPanel";
+import MissionReportColumn from "../components/MissionReportColumn";
 import "../styles/ImageAnalysis.css";
 
 export default function ImageAnalysis() {
@@ -291,6 +292,11 @@ return (
                     </div>
                 </div>
             )}
+
+            {/* MISSION REPORT COLUMN */}
+            <div style={{ marginTop: '30px' }}>
+                <MissionReportColumn />
+            </div>
         </div>
     );
 }

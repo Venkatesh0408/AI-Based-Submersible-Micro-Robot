@@ -89,23 +89,7 @@ const generalLimiter = rateLimit({
   message: { success: false, message: "Too many requests from this IP, please try again later." }
 });
 
-const esp32Limiter = rateLimit({
-  windowMs,
-  max: maxRequests * 5,
-  validate: { xForwardedForHeader: false },
-  message: { success: false, message: "Too many telemetry requests." }
-});
-
 app.use("/api/", generalLimiter);
-
-const verifyEsp32Token = (req, res, next) => {
-    const token = req.headers['x-esp32-auth'] || req.query.token;
-    if (process.env.ESP32_AUTH_TOKEN && token !== process.env.ESP32_AUTH_TOKEN) {
-        logger.warn(`Unauthorized ESP32 access attempt from IP: ${req.ip}`);
-        return res.status(401).json({ success: false, message: "Unauthorized" });
-    }
-    next();
-};
 
 // ==========================================================
 // SIMULATED SYSTEM STATE
@@ -121,8 +105,8 @@ interface EventLog {
   time: string;
 }
 
-const HOME_LATITUDE = 12.908200;
-const HOME_LONGITUDE = 77.518600;
+let HOME_LATITUDE = 12.908200;
+let HOME_LONGITUDE = 77.518600;
 
 const robotState = {
   name: "VSTY",
@@ -162,11 +146,6 @@ const robotState = {
 const eventLogs: EventLog[] = [
   { type: "SYSTEM", message: "AquaSentinel Mission Control Booted", time: new Date().toLocaleTimeString() }
 ];
-
-let esp32Data = {
-  status: "Disconnected",
-  lastSeen: ""
-};
 
 // Simulated AI Detection Variables
 const detectionLabels = ["Crack", "Corrosion", "Leakage", "Algae", "Blockage", "Rust"];
@@ -377,13 +356,13 @@ app.get("/api/health", (req, res) => {
         status: robotState.battery > 20 ? "OK" : "WARNING" 
     },
     { 
-        name: "📡 ESP32-CAM Comm", 
+        name: "📡 ESP32-CAM WiFi Network", 
         value: isCommError ? "Packet Loss" : "Stable", 
         width: isCommError ? "40%" : "100%", 
         color: isCommError ? "#ff4444" : "#00d4ff", 
         status: isCommError ? "ERROR" : "OK",
-        error: isCommError ? "Video stream latency high." : null,
-        solution: isCommError ? "Check Wi-Fi antenna on ESP32-CAM." : null
+        error: isCommError ? "Live video stream latency high." : null,
+        solution: isCommError ? "Check Wi-Fi connection on ESP32-CAM module." : null
     },
     { 
         name: "⚙️ L298N Motor Driver", 
@@ -402,8 +381,8 @@ app.get("/api/health", (req, res) => {
         status: "OK" 
     },
     { 
-        name: "🧠 Arduino Nano CPU", 
-        value: "35%", 
+        name: "🧠 Arduino Nano (Master MCU Controller)", 
+        value: "35% Load", 
         width: "35%", 
         color: "#ff9800", 
         status: "OK" 
@@ -491,6 +470,18 @@ app.get("/api/gps", (req, res) => {
     currentWaypoint: robotState.current_waypoint,
     totalWaypoints: robotState.total_waypoints
   });
+});
+
+app.post("/api/gps", (req, res) => {
+  const { latitude, longitude } = req.body;
+  if (typeof latitude === "number" && typeof longitude === "number" && !isNaN(latitude) && !isNaN(longitude)) {
+    HOME_LATITUDE = latitude;
+    HOME_LONGITUDE = longitude;
+    robotState.latitude = latitude;
+    robotState.longitude = longitude;
+    return res.json({ success: true, latitude, longitude });
+  }
+  return res.status(400).json({ success: false, message: "Invalid latitude or longitude" });
 });
 
 const waypointSchema = z.object({
@@ -858,11 +849,11 @@ app.delete("/api/media/:filename", (req, res) => {
 });
 
 // ==========================================================
-// RASPBERRY PI WIRELESS WIFI CAMERA STREAMING & PROXY
+// ESP32-CAM WIRELESS WIFI CAMERA STREAMING & PROXY
 // ==========================================================
 
-// Ping/Test Raspberry Pi Camera connection over WiFi
-app.get("/api/rpi-ping", async (req, res) => {
+// Ping/Test ESP32-CAM Camera connection over WiFi
+const handleCamPing = async (req: express.Request, res: express.Response) => {
   const targetUrl = req.query.url as string;
   if (!targetUrl) {
     if (!res.headersSent) return res.status(400).json({ online: false, message: "Missing target stream URL" });
@@ -881,7 +872,7 @@ app.get("/api/rpi-ping", async (req, res) => {
           status: clientRes.statusCode,
           contentType: clientRes.headers["content-type"] || "video/mjpeg",
           latencyMs,
-          message: `Raspberry Pi Camera connected over WiFi (${latencyMs}ms)`
+          message: `ESP32-CAM connected over WiFi (${latencyMs}ms)`
         });
       }
     });
@@ -890,7 +881,7 @@ app.get("/api/rpi-ping", async (req, res) => {
       if (!res.headersSent) {
         res.json({
           online: false,
-          message: `Could not reach Raspberry Pi at ${targetUrl}: ${err.message}`
+          message: `Could not reach ESP32-CAM at ${targetUrl}: ${err.message}`
         });
       }
     });
@@ -900,22 +891,25 @@ app.get("/api/rpi-ping", async (req, res) => {
       if (!res.headersSent) {
         res.json({
           online: false,
-          message: `Timeout connecting to Raspberry Pi at ${targetUrl}`
+          message: `Timeout connecting to ESP32-CAM at ${targetUrl}`
         });
       }
     });
   } catch (err: any) {
     if (!res.headersSent) {
-      res.json({ online: false, message: err.message || "Failed to reach Raspberry Pi" });
+      res.json({ online: false, message: err.message || "Failed to reach ESP32-CAM" });
     }
   }
-});
+};
 
-// Proxy Raspberry Pi MJPEG camera stream to avoid browser CORS/Mixed-Content issues
-app.get("/api/rpi-proxy", (req, res) => {
+app.get("/api/esp-ping", handleCamPing);
+app.get("/api/rpi-ping", handleCamPing);
+
+// Proxy ESP32-CAM MJPEG camera stream to avoid browser CORS/Mixed-Content issues
+const handleCamProxy = (req: express.Request, res: express.Response) => {
   const targetUrl = req.query.url as string;
   if (!targetUrl) {
-    if (!res.headersSent) return res.status(400).send("Missing Raspberry Pi stream URL");
+    if (!res.headersSent) return res.status(400).send("Missing ESP32-CAM stream URL");
     return;
   }
 
@@ -938,16 +932,16 @@ app.get("/api/rpi-proxy", (req, res) => {
     });
 
     proxyReq.on("error", (err) => {
-      logger.error("Raspberry Pi Stream Proxy Error:", err);
+      logger.error("ESP32-CAM Stream Proxy Error:", err);
       if (!res.headersSent) {
-        res.status(502).send(`Raspberry Pi Stream Proxy Error: ${err.message}`);
+        res.status(502).send(`ESP32-CAM Stream Proxy Error: ${err.message}`);
       }
     });
 
     proxyReq.on("timeout", () => {
       proxyReq.destroy();
       if (!res.headersSent) {
-        res.status(504).send("Raspberry Pi Stream Timeout");
+        res.status(504).send("ESP32-CAM Stream Timeout");
       }
     });
   } catch (err: any) {
@@ -955,10 +949,13 @@ app.get("/api/rpi-proxy", (req, res) => {
       res.status(500).send(`Failed to proxy stream: ${err.message}`);
     }
   }
-});
+};
 
-// Capture a live snapshot from Raspberry Pi stream and save to /public/media/
-app.post("/api/rpi-snapshot", async (req, res) => {
+app.get("/api/esp-proxy", handleCamProxy);
+app.get("/api/rpi-proxy", handleCamProxy);
+
+// Capture a live snapshot from ESP32-CAM stream and save to /public/media/
+const handleCamSnapshot = async (req: express.Request, res: express.Response) => {
   const { url, filename } = req.body || {};
   if (!url) {
     if (!res.headersSent) return res.status(400).json({ success: false, message: "Missing stream URL" });
@@ -966,7 +963,7 @@ app.post("/api/rpi-snapshot", async (req, res) => {
   }
 
   try {
-    const safeName = filename ? path.basename(filename) : `rpi-snapshot-${Date.now()}.jpg`;
+    const safeName = filename ? path.basename(filename) : `esp-snapshot-${Date.now()}.jpg`;
     const targetPath = path.join(mediaDir, safeName);
 
     const protocol = url.startsWith("https") ? https : http;
@@ -976,12 +973,12 @@ app.post("/api/rpi-snapshot", async (req, res) => {
       streamRes.on("end", () => {
         const fullBuffer = Buffer.concat(chunks);
         fsLib.writeFileSync(targetPath, fullBuffer);
-        logger.info(`Saved Raspberry Pi snapshot to ${targetPath}`);
+        logger.info(`Saved ESP32-CAM snapshot to ${targetPath}`);
 
         if (!res.headersSent) {
           res.json({
             success: true,
-            message: "Snapshot captured from Raspberry Pi and saved to /public/media/",
+            message: "Snapshot captured from ESP32-CAM and saved to /public/media/",
             file: {
               filename: safeName,
               url: `/media/${safeName}`
@@ -992,23 +989,20 @@ app.post("/api/rpi-snapshot", async (req, res) => {
     });
 
     snapshotReq.on("error", (err) => {
+      logger.error(`ESP32-CAM Snapshot Error: ${err.message}`);
       if (!res.headersSent) {
-        res.status(502).json({ success: false, message: `Failed to capture frame: ${err.message}` });
-      }
-    });
-
-    snapshotReq.on("timeout", () => {
-      snapshotReq.destroy();
-      if (!res.headersSent) {
-        res.status(504).json({ success: false, message: "Snapshot request timed out" });
+        res.status(500).json({ success: false, message: `Failed to capture ESP32-CAM frame: ${err.message}` });
       }
     });
   } catch (err: any) {
     if (!res.headersSent) {
-      res.status(500).json({ success: false, message: err.message || "Failed to save snapshot" });
+      res.status(500).json({ success: false, message: err.message });
     }
   }
-});
+};
+
+app.post("/api/esp-snapshot", handleCamSnapshot);
+app.post("/api/rpi-snapshot", handleCamSnapshot);
 
 
 
@@ -1185,6 +1179,21 @@ app.get("/api/analysis-history", async (req, res) => {
   res.json(await getHistory());
 });
 
+app.post("/api/analysis-history", async (req, res) => {
+  try {
+    const item = req.body;
+    if (!item || typeof item !== "object") {
+      return res.status(400).json({ success: false, message: "Invalid payload" });
+    }
+    if (!item.id) item.id = Date.now().toString();
+    if (!item.timestamp) item.timestamp = new Date().toISOString();
+    await saveHistoryItem(item);
+    res.json({ success: true, item });
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: err.message || "Failed to save history item" });
+  }
+});
+
 app.delete("/api/analysis-history/:id", async (req, res) => {
   const deleted = await deleteHistoryItem(req.params.id);
   if (deleted) {
@@ -1207,6 +1216,71 @@ app.get("/api/detections", async (req, res) => {
 });
 
 // Get AI stats
+app.post("/api/maps-grounding", async (req, res) => {
+  try {
+    const { query, latitude, longitude } = req.body || {};
+    const lat = typeof latitude === "number" && !isNaN(latitude) ? latitude : 12.9082;
+    const lng = typeof longitude === "number" && !isNaN(longitude) ? longitude : 77.5186;
+    const userPrompt = query && typeof query === "string" && query.trim()
+      ? xss(query.trim())
+      : "Find nearby water reservoirs, dams, water treatment facilities, pump stations, or lakes near this location for underwater micro-robot inspection.";
+
+    const aiClient = getAI();
+    const response = await aiClient.models.generateContent({
+      model: "gemini-3.5-flash",
+      contents: `You are an AI Assistant for a Submersible Micro Robot Mission Control System.
+The robot is currently deployed at latitude ${lat}, longitude ${lng}.
+User query: ${userPrompt}
+
+Provide structured, accurate details about real nearby water bodies, water infrastructure, pump stations, treatment plants, reservoirs, or relevant facilities grounded in Google Maps data.
+Include practical inspection advice for each site.`,
+      config: {
+        tools: [{ googleMaps: {} }],
+        toolConfig: {
+          retrievalConfig: {
+            latLng: {
+              latitude: lat,
+              longitude: lng,
+            },
+          },
+        },
+      },
+    });
+
+    const text = response.text || "";
+    const candidate = response.candidates?.[0];
+    const groundingChunks = candidate?.groundingMetadata?.groundingChunks || [];
+    const webSearchQueries = candidate?.groundingMetadata?.webSearchQueries || [];
+
+    const places = groundingChunks.map((chunk: any) => {
+      if (chunk.maps) {
+        return {
+          title: chunk.maps.title || "Location",
+          uri: chunk.maps.uri || "",
+          address: chunk.maps.address || "",
+          placeAnswerSources: chunk.maps.placeAnswerSources || null,
+        };
+      }
+      return null;
+    }).filter(Boolean);
+
+    return res.json({
+      success: true,
+      text,
+      places,
+      groundingChunks,
+      webSearchQueries,
+      location: { latitude: lat, longitude: lng },
+    });
+  } catch (err: any) {
+    logger.error(`Maps Grounding API error: ${err.message}`);
+    return res.status(500).json({
+      success: false,
+      message: err.message || "Failed to query Google Maps data.",
+    });
+  }
+});
+
 app.get("/api/ai/statistics", async (req, res) => {
   const historyList = await getHistory();
   let allDetections = [];
@@ -1244,25 +1318,6 @@ app.get("/api/ai/statistics", async (req, res) => {
     corrosion: allDetections.filter(x => x.type === "Corrosion").length,
     leakage: allDetections.filter(x => x.type === "Pipe Leakage").length,
     algae: allDetections.filter(x => x.type === "Algae").length
-  });
-});
-
-// ESP32 simulation
-app.post("/api/esp32", esp32Limiter, verifyEsp32Token, (req, res) => {
-  esp32Data = {
-    status: "Connected",
-    lastSeen: new Date().toLocaleTimeString()
-  };
-  res.json({
-    success: true,
-    message: "ESP32 data received"
-  });
-});
-
-app.get("/api/esp32", verifyEsp32Token, (req, res) => {
-  res.json({
-    status: esp32Data.status,
-    lastSeen: esp32Data.lastSeen
   });
 });
 

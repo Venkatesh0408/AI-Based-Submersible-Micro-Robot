@@ -185,18 +185,24 @@ section{
 
 }
 /*====================================================
-                MISSION STATUS
+                MISSION STATUS & HERO GRID
 =====================================================*/
+
+@media (max-width: 900px) {
+    .main-hero-grid {
+        grid-template-columns: 1fr !important;
+    }
+}
 
 .mission-status{
 
-    margin-bottom:30px;
+    margin-bottom:12px;
 
     background:#0f0507;
 
-    border-radius:22px;
+    border-radius:12px;
 
-    padding:30px;
+    padding:12px;
 
     box-shadow:0 0 20px rgba(255,42,75,.2);
 

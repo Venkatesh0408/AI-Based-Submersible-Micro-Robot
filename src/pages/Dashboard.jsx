@@ -6,6 +6,7 @@ import MissionToolbar from "../components/MissionToolbar";
 import CameraPanel from "../components/CameraPanel";
 import SensorCard from "../components/SensorCard";
 import InspectionPanel from "../components/InspectionPanel";
+import MissionReportColumn from "../components/MissionReportColumn";
 import HealthPanel from "../components/HealthPanel";
 import { getSensorData } from "../services/api";
 
@@ -32,15 +33,31 @@ export default function Dashboard() {
         <div className="dashboard">
             
             <Header />
-            <MissionStatus />
-            {/* CAMERA + CONTROL */}
-            <div className="top-section-full" style={{ marginBottom: '30px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                <CameraPanel />
-                <MissionToolbar />
+            {/* TOP 3-COMPONENT MAIN GRID: CAMERA 60% (LEFT) | MISSION STATUS + TOOLBAR 40% (RIGHT) */}
+            <div className="main-hero-grid" style={{
+                display: 'grid',
+                gridTemplateColumns: 'minmax(0, 3fr) minmax(0, 2fr)',
+                gap: '16px',
+                marginBottom: '16px',
+                alignItems: 'start'
+            }}>
+                {/* 60% VIDEO FEED */}
+                <div style={{ minWidth: 0 }}>
+                    <CameraPanel />
+                </div>
+
+                {/* 40% MISSION STATUS & CONTROLS */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', minWidth: 0 }}>
+                    <MissionStatus />
+                    <MissionToolbar />
+                </div>
             </div>
 
-            <div className="three-panels" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '25px', marginBottom: '30px' }}>
+            <div className="three-panels" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px', marginBottom: '16px' }}>
                 <InspectionPanel />
+                
+                {/* MISSION REPORT COMPACT CARD */}
+                <MissionReportColumn />
 
                 {/* GPS CARD */}
                 <div

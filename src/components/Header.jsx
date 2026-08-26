@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import "../styles/Header.css";
-import MissionTimer from "./MissionTimer";
 
 export default function Header() {
   const [time, setTime] = useState("");
@@ -43,22 +42,6 @@ export default function Header() {
           <span>
             AI Powered Underwater Inspection & Mission Control System
           </span>
-        </div>
-      </div>
-
-      <div className="header-center">
-        <MissionTimer />
-        <div className="status-chip online">
-          🟢 Robot Online
-        </div>
-        <div className="status-chip battery">
-          🔋 92%
-        </div>
-        <div className="status-chip gps">
-          📡 GPS Locked
-        </div>
-        <div className="status-chip water">
-          🌊 Water Safe
         </div>
       </div>
 

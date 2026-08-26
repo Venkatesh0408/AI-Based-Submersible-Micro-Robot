@@ -168,6 +168,7 @@ export default function InteractiveMap(){
     setHome,
     thrustersActive,
     setBotLocation,
+    enableLiveSystemGps,
     locationSource,
     gpsStatusMessage,
     setGpsStatusMessage
@@ -182,26 +183,8 @@ export default function InteractiveMap(){
     }, [robot.latitude, robot.longitude]);
 
     const handleRelocate = () => {
-        if (navigator.geolocation) {
-            setGpsStatusMessage("Locating via browser GPS...");
-            navigator.geolocation.getCurrentPosition(
-                (pos) => {
-                    const lat = pos.coords.latitude;
-                    const lng = pos.coords.longitude;
-                    setBotLocation(lat, lng, true);
-                    setLocateTrigger(prev => prev + 1);
-                },
-                (err) => {
-                    console.warn("Browser Geolocation Error:", err);
-                    setGpsStatusMessage("Browser GPS restricted/denied. Use Manual GPS inputs below.");
-                    setShowManualGps(true);
-                },
-                { enableHighAccuracy: true, timeout: 5000 }
-            );
-        } else {
-            setGpsStatusMessage("Browser Geolocation not supported. Use Manual GPS inputs.");
-            setShowManualGps(true);
-        }
+        enableLiveSystemGps();
+        setLocateTrigger(prev => prev + 1);
     };
 
     const applyCustomCoordinates = (e) => {
@@ -231,20 +214,38 @@ export default function InteractiveMap(){
             }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                     <span style={{
-                        padding: "3px 8px",
+                        padding: "3px 10px",
                         borderRadius: "12px",
                         fontSize: "10px",
                         fontWeight: "bold",
-                        background: locationSource === "BROWSER_GPS" ? "rgba(34,197,94,0.2)" : "rgba(234,179,8,0.2)",
-                        color: locationSource === "BROWSER_GPS" ? "#4ade80" : "#fde047",
-                        border: `1px solid ${locationSource === "BROWSER_GPS" ? "#22c55e" : "#eab308"}`
+                        background: locationSource === "BROWSER_GPS" ? "rgba(34,197,94,0.2)" : locationSource === "IP_GEOLOCATION" ? "rgba(59,130,246,0.2)" : "rgba(234,179,8,0.2)",
+                        color: locationSource === "BROWSER_GPS" ? "#4ade80" : locationSource === "IP_GEOLOCATION" ? "#60a5fa" : "#fde047",
+                        border: `1px solid ${locationSource === "BROWSER_GPS" ? "#22c55e" : locationSource === "IP_GEOLOCATION" ? "#3b82f6" : "#eab308"}`
                     }}>
-                        {locationSource === "BROWSER_GPS" ? "🌐 BROWSER GPS" : "⚙️ MANUAL / PRESET GPS"}
+                        {locationSource === "BROWSER_GPS" ? "📡 LIVE SYSTEM GPS (1s REFRESH)" : locationSource === "IP_GEOLOCATION" ? "🌐 NETWORK GPS" : "⚙️ MANUAL OVERRIDE"}
                     </span>
                     <span style={{ color: "#d19ca3", fontSize: "11px" }}>{gpsStatusMessage}</span>
                 </div>
 
                 <div style={{ display: "flex", gap: "6px" }}>
+                    {locationSource === "MANUAL_OVERRIDE" && (
+                        <button
+                            type="button"
+                            onClick={enableLiveSystemGps}
+                            style={{
+                                background: "rgba(34,197,94,0.2)",
+                                color: "#4ade80",
+                                border: "1px solid #22c55e",
+                                borderRadius: "8px",
+                                padding: "4px 10px",
+                                fontSize: "11px",
+                                fontWeight: "bold",
+                                cursor: "pointer"
+                            }}
+                        >
+                            📡 Resume Live System GPS (1s Auto-Refresh)
+                        </button>
+                    )}
                     <button
                         type="button"
                         onClick={() => setShowManualGps(!showManualGps)}
