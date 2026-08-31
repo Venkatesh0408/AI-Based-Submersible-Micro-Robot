@@ -8,8 +8,17 @@ import {
 import { fetchMedia, uploadMedia, pingEspCam, captureEspSnapshot } from "../services/api";
 import "../styles/Camera.css";
 
+const STANDARD_CAM_ENVIRONMENTS = ["Water Tank", "River", "Lake", "Pipeline", "Dam", "Wastewater Plant"];
+
 export default function CameraPanel() {
   const { missionName, setMissionName, inspectionArea, setInspectionArea, missionStarted, missionPaused } = useMission();
+  const [isCustomEnv, setIsCustomEnv] = useState(() => Boolean(inspectionArea && !STANDARD_CAM_ENVIRONMENTS.includes(inspectionArea)));
+
+  useEffect(() => {
+    if (inspectionArea && !STANDARD_CAM_ENVIRONMENTS.includes(inspectionArea)) {
+      setIsCustomEnv(true);
+    }
+  }, [inspectionArea]);
   const [online, setOnline] = useState(true);
   const [fps, setFps] = useState(30);
   const [resolution] = useState("VGA / SVGA (ESP32-CAM)");
@@ -319,19 +328,41 @@ void loop() { delay(1000); }`;
             style={{ flex: 1, minWidth: '160px', padding: '10px', borderRadius: '8px', border: '1px solid #ff2a4b', background: '#1a080c', color: 'white', outline: 'none' }}
           />
           <select 
-            value={inspectionArea || ""} 
-            onChange={(e) => setInspectionArea && setInspectionArea(e.target.value)}
+            value={isCustomEnv ? "Custom" : (inspectionArea || "")} 
+            onChange={(e) => {
+              if (e.target.value === "Custom") {
+                setIsCustomEnv(true);
+                if (STANDARD_CAM_ENVIRONMENTS.includes(inspectionArea)) {
+                  setInspectionArea && setInspectionArea("Custom Location");
+                }
+              } else {
+                setIsCustomEnv(false);
+                setInspectionArea && setInspectionArea(e.target.value);
+              }
+            }}
             disabled={missionStarted}
-            style={{ flex: 1, minWidth: '160px', padding: '10px', borderRadius: '8px', border: '1px solid #ff2a4b', background: '#1a080c', color: 'white', outline: 'none' }}
+            style={{ flex: 1, minWidth: '140px', padding: '10px', borderRadius: '8px', border: '1px solid #ff2a4b', background: '#1a080c', color: 'white', outline: 'none' }}
           >
             <option value="">Select Inspection Area</option>
             <option value="Water Tank">Water Tank</option>
             <option value="River">River</option>
             <option value="Lake">Lake</option>
             <option value="Pipeline">Pipeline</option>
-            <option value="Ocean">Ocean</option>
-            <option value="Custom">Custom</option>
+            <option value="Dam">Dam</option>
+            <option value="Wastewater Plant">Wastewater Plant</option>
+            <option value="Custom">Custom Location...</option>
           </select>
+
+          {isCustomEnv && (
+            <input 
+              type="text" 
+              placeholder="Enter Custom Location Name" 
+              value={inspectionArea || ""} 
+              onChange={(e) => setInspectionArea && setInspectionArea(e.target.value)}
+              disabled={missionStarted}
+              style={{ flex: 1, minWidth: '160px', padding: '10px', borderRadius: '8px', border: '1px solid #ff2a4b', background: '#1a080c', color: 'white', outline: 'none' }}
+            />
+          )}
         </div>
       </div>
 

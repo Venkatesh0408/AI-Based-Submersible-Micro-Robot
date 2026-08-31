@@ -1,9 +1,21 @@
 import { useMission } from "../context/MissionContext";
-import { Navigation, Clock, CheckCircle2, PlayCircle, Hourglass } from "lucide-react";
+import { Navigation, Trash2 } from "lucide-react";
 
 export default function WaypointList() {
-    const { getWaypointSegments, currentWaypoint, missionStarted } = useMission();
+    const { getWaypointSegments, currentWaypoint, missionStarted, removeWaypoint } = useMission();
     const segments = getWaypointSegments();
+
+    const btnStyle = {
+        background: "rgba(255, 42, 75, 0.2)",
+        border: "1px solid rgba(255, 42, 75, 0.4)",
+        color: "#ff2a4b",
+        borderRadius: "4px",
+        padding: "3px 6px",
+        cursor: "pointer",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center"
+    };
 
     return (
         <div className="timeline-card" style={{ background: '#0f0507', border: '1px solid rgba(255, 42, 75, 0.25)', borderRadius: '16px', padding: '16px' }}>
@@ -48,9 +60,20 @@ export default function WaypointList() {
                                     <h4 style={{ color: '#fff', fontSize: '13px', margin: 0, fontWeight: 'bold' }}>
                                         WP #{seg.index}: {seg.to}
                                     </h4>
-                                    <span style={{ color: '#ff2a4b', fontSize: '12px', fontWeight: 'bold', fontFamily: '"Orbitron", sans-serif' }}>
-                                        {seg.distanceMeters.toFixed(1)} m
-                                    </span>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <span style={{ color: '#ff2a4b', fontSize: '12px', fontWeight: 'bold', fontFamily: '"Orbitron", sans-serif' }}>
+                                            {seg.distanceMeters.toFixed(1)} m
+                                        </span>
+                                        {!missionStarted && (
+                                            <button
+                                                onClick={() => removeWaypoint(index)}
+                                                style={btnStyle}
+                                                title="Delete Waypoint"
+                                            >
+                                                <Trash2 size={12} />
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
 
                                 <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px', fontSize: '11px', color: '#a08085' }}>

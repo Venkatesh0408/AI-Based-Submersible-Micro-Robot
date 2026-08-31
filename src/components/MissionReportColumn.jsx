@@ -70,6 +70,8 @@ const SAMPLE_DEFECTS = [
   }
 ];
 
+const STANDARD_ENVIRONMENTS = ["Water Tank", "Dam", "Lake", "River", "Pipeline", "Wastewater Plant"];
+
 export default function MissionReportColumn() {
   const { 
     missionName, 
@@ -82,6 +84,7 @@ export default function MissionReportColumn() {
   // Report state fields
   const [reportMissionName, setReportMissionName] = useState(missionName || "Underwater Inspection Mission 01");
   const [environmentType, setEnvironmentType] = useState(inspectionArea || "Water Tank");
+  const [isCustomEnv, setIsCustomEnv] = useState(!STANDARD_ENVIRONMENTS.includes(inspectionArea || "Water Tank"));
   const [address, setAddress] = useState("Sector 4 Water Tank Subsurface Wall, Outer Ring Road, Bengaluru, Karnataka 560060");
   const [ipAddress, setIpAddress] = useState("192.168.1.100:81");
   const [lat, setLat] = useState(robot.latitude || 12.908200);
@@ -100,7 +103,10 @@ export default function MissionReportColumn() {
   // Sync state if context changes
   useEffect(() => {
     if (missionName) setReportMissionName(missionName);
-    if (inspectionArea) setEnvironmentType(inspectionArea);
+    if (inspectionArea) {
+      setEnvironmentType(inspectionArea);
+      setIsCustomEnv(!STANDARD_ENVIRONMENTS.includes(inspectionArea));
+    }
     if (robot.latitude) setLat(robot.latitude);
     if (robot.longitude) setLng(robot.longitude);
   }, [missionName, inspectionArea, robot.latitude, robot.longitude]);
@@ -109,6 +115,7 @@ export default function MissionReportColumn() {
   const handleSelectPreset = (preset) => {
     setDefectType(preset.type);
     setEnvironmentType(preset.environment);
+    setIsCustomEnv(!STANDARD_ENVIRONMENTS.includes(preset.environment));
     setSeverity(preset.severity);
     setOverallCondition(preset.severity === "CRITICAL" ? "CRITICAL" : "NEEDS ATTENTION");
     setAddress(preset.address);
@@ -498,8 +505,18 @@ export default function MissionReportColumn() {
                 <div>
                   <label style={{ color: "#a08085", fontSize: "11px", display: "block", marginBottom: "4px" }}>Where Mission is Conducted (Target Facility):</label>
                   <select
-                    value={environmentType}
-                    onChange={(e) => setEnvironmentType(e.target.value)}
+                    value={isCustomEnv ? "Custom" : environmentType}
+                    onChange={(e) => {
+                      if (e.target.value === "Custom") {
+                        setIsCustomEnv(true);
+                        if (STANDARD_ENVIRONMENTS.includes(environmentType)) {
+                          setEnvironmentType("Custom Location");
+                        }
+                      } else {
+                        setIsCustomEnv(false);
+                        setEnvironmentType(e.target.value);
+                      }
+                    }}
                     style={{
                       width: "100%",
                       background: "#0a0305",
@@ -518,9 +535,35 @@ export default function MissionReportColumn() {
                     <option value="Lake">🌊 Natural Lake / Reservoir Body</option>
                     <option value="River">🌊 River / Aqueduct Pipeline</option>
                     <option value="Pipeline">🚰 Water Distribution Pipeline</option>
-                    <option value="Ocean">🌊 Ocean / Subsea Offshore Platform</option>
                     <option value="Wastewater Plant">🏭 Wastewater Treatment Facility</option>
+                    <option value="Custom">⚙️ Custom Location...</option>
                   </select>
+
+                  {isCustomEnv && (
+                    <div style={{ marginTop: "8px" }}>
+                      <label style={{ color: "#ff2a4b", fontSize: "10.5px", fontWeight: "bold", display: "block", marginBottom: "3px" }}>
+                        Enter Custom Target Location Name:
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Industrial Chemical Tank 4"
+                        value={environmentType}
+                        onChange={(e) => setEnvironmentType(e.target.value)}
+                        style={{
+                          width: "100%",
+                          background: "#0a0305",
+                          border: "1px solid #ff2a4b",
+                          color: "#ffffff",
+                          padding: "8px 10px",
+                          borderRadius: "8px",
+                          fontSize: "12px",
+                          fontWeight: "bold",
+                          outline: "none",
+                          boxSizing: "border-box"
+                        }}
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
 

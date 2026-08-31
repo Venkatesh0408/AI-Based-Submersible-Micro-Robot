@@ -259,55 +259,42 @@ export const MissionProvider = ({ children }) => {
     // =====================================================
 
     const addWaypoint = (lat, lng) => {
-
         if (missionStarted) return;
-
         setWaypoints(prev => [
-
             ...prev,
-
             {
-
-                id: Date.now(),
-
+                id: Date.now() + Math.random(),
                 lat,
-
                 lng
-
             }
-
         ]);
-
+        setRouteSaved(false);
     };
-
-    // =====================================================
-    // UNDO
-    // =====================================================
 
     const undoWaypoint = () => {
-
         if (missionStarted) return;
-
         setWaypoints(prev => prev.slice(0, -1));
-
+        setRouteSaved(false);
     };
 
-    // =====================================================
-    // CLEAR
-    // =====================================================
+    const removeWaypoint = (index) => {
+        if (missionStarted) return;
+        setWaypoints(prev => prev.filter((_, i) => i !== index));
+        setRouteSaved(false);
+    };
+
+    const updateWaypoint = (index, lat, lng) => {
+        if (missionStarted) return;
+        setWaypoints(prev => prev.map((wp, i) => i === index ? { ...wp, lat, lng } : wp));
+        setRouteSaved(false);
+    };
 
     const clearWaypoints = () => {
-
         if (missionStarted) return;
-
         setWaypoints([]);
-
         setRouteSaved(false);
-
         setProgress(0);
-
         setCurrentWaypoint(0);
-
     };
 
     const [activeThrusterTime, setActiveThrusterTime] = useState(0);
@@ -388,7 +375,12 @@ export const MissionProvider = ({ children }) => {
             console.log("Add at least one waypoint");
             return;
         }
+        // Preserve exact user-defined waypoint sequence without auto-shuffling
+        setRouteSaved(true);
+    };
 
+    const optimizeRoute = () => {
+        if (waypoints.length < 1) return;
         let remaining = [...waypoints];
         let currentPos = { lat: homePosition.lat, lng: homePosition.lng };
         let optimized = [];
@@ -410,7 +402,7 @@ export const MissionProvider = ({ children }) => {
         }
 
         setWaypoints(optimized);
-        setRouteSaved(true);
+        setRouteSaved(false);
     };
         // =====================================================
     // START MISSION
@@ -584,9 +576,6 @@ export const MissionProvider = ({ children }) => {
                 setRobot(prev => {
 
                     const home = homePosition;
-
-                    const step = 0.00002;
-
                     let lat = prev.latitude;
                     let lng = prev.longitude;
 
@@ -601,73 +590,42 @@ export const MissionProvider = ({ children }) => {
                         currentHeading = targetBearingDeg;
                     }
 
-                    if (Math.abs(home.lat - lat) > step) {
+                    const dLat = home.lat - lat;
+                    const dLng = home.lng - lng;
+                    const distDeg = Math.hypot(dLat, dLng);
+                    const step = 0.00002;
 
-                        lat += home.lat > lat ? step : -step;
-
-                    }
-
-                    if (Math.abs(home.lng - lng) > step) {
-
-                        lng += home.lng > lng ? step : -step;
-
-                    }
-
-                    if (
-
-                        Math.abs(home.lat - lat) <= step &&
-                        Math.abs(home.lng - lng) <= step
-
-                    ) {
-
+                    if (distDeg <= step) {
                         clearInterval(timer);
-
                         setReturningHome(false);
-
                         setMissionStarted(false);
-
                         setMissionCompleted(true);
-
                         setThrustersActive(false);
 
                         return {
-
                             ...prev,
-
                             latitude: home.lat,
-
                             longitude: home.lng,
-
                             heading: targetBearingDeg,
-
                             status: "MISSION COMPLETE"
-
                         };
-
+                    } else {
+                        lat += (step * dLat) / distDeg;
+                        lng += (step * dLng) / distDeg;
                     }
 
                     return {
-
                         ...prev,
-
                         latitude: lat,
-
                         longitude: lng,
-
                         heading: currentHeading,
-
                         battery: Math.max(prev.battery - 0.02, 0),
-
                         signal: Math.max(prev.signal - 0.01, 0),
-
                         status: "RETURNING HOME (THRUSTERS ON)"
-
                     };
-
                 });
 
                 return;
-
             }
 
             // -------------------------------
@@ -691,11 +649,7 @@ export const MissionProvider = ({ children }) => {
             const target = waypoints[currentWaypoint];
 
             setRobot(prev => {
-
-                const step = 0.00002;
-
                 let lat = prev.latitude;
-
                 let lng = prev.longitude;
 
                 const targetBrng = calculateBearingAngle({ lat, lng }, target);
@@ -723,49 +677,32 @@ export const MissionProvider = ({ children }) => {
                 const remainingThrusterSec = calculateThrusterTimeSeconds(currentDistMeters);
                 setActiveThrusterTime(remainingThrusterSec);
 
-                if (Math.abs(target.lat - lat) > step) {
+                const dLat = target.lat - lat;
+                const dLng = target.lng - lng;
+                const distDeg = Math.hypot(dLat, dLng);
+                const step = 0.00002;
 
-                    lat += target.lat > lat ? step : -step;
-
-                }
-
-                if (Math.abs(target.lng - lng) > step) {
-
-                    lng += target.lng > lng ? step : -step;
-
-                }
-
-                if (
-
-                    Math.abs(target.lat - lat) <= step &&
-                    Math.abs(target.lng - lng) <= step
-
-                ) {
-
+                if (distDeg <= step) {
+                    lat = target.lat;
+                    lng = target.lng;
                     setTimeout(() => { 
                         setCurrentWaypoint(currentWaypoint + 1); 
                         setProgress(Math.round(((currentWaypoint + 1) / waypoints.length) * 100)); 
                         setWaypointTime(0); 
                     }, 0);
-
+                } else {
+                    lat += (step * dLat) / distDeg;
+                    lng += (step * dLng) / distDeg;
                 }
 
                 return {
-
                     ...prev,
-
                     latitude: lat,
-
                     longitude: lng,
-
                     heading: targetBrng,
-
                     battery: Math.max(prev.battery - 0.02, 0),
-
                     signal: Math.max(prev.signal - 0.01, 0),
-
                     status: `THRUSTERS ON (${remainingThrusterSec}s REMAINING)`
-
                 };
 
             });
@@ -836,8 +773,11 @@ export const MissionProvider = ({ children }) => {
         waypointTime,
         addWaypoint,
         undoWaypoint,
+        removeWaypoint,
+        updateWaypoint,
         clearWaypoints,
         saveRoute,
+        optimizeRoute,
         startMission,
         pauseMission,
         resumeMission,

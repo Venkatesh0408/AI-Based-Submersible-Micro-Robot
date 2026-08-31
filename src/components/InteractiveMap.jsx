@@ -102,6 +102,34 @@ const createRobotIcon = (heading = 0, isThrusterActive = false) => new L.DivIcon
 });
 
 // =============================================
+// DYNAMIC WAYPOINT ICON WITH NUMBER & HIGHLIGHT
+// =============================================
+const createWaypointIcon = (number, isCurrent) => new L.DivIcon({
+    className: "",
+    html: `
+        <div style="
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: ${isCurrent ? '#facc15' : '#1a080c'};
+            border: 2px solid ${isCurrent ? '#ffffff' : '#00d9ff'};
+            color: ${isCurrent ? '#000000' : '#ffffff'};
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            font-weight: bold;
+            box-shadow: 0 0 ${isCurrent ? '14px #facc15' : '8px #00d9ff'};
+            cursor: pointer;
+        ">
+            ${number}
+        </div>
+    `,
+    iconSize: [28, 28],
+    iconAnchor: [14, 14]
+});
+
+// =============================================
 // =============================================
 // MAP CLICK HANDLER (WAYPOINT / BOT / HOME)
 // =============================================
@@ -164,6 +192,9 @@ export default function InteractiveMap(){
     missionStarted,
     missionCompleted,
     undoWaypoint,
+    removeWaypoint,
+    updateWaypoint,
+    optimizeRoute,
     clearWaypoints,
     setHome,
     thrustersActive,
@@ -524,87 +555,52 @@ export default function InteractiveMap(){
                     WAYPOINTS
             =========================================== */}
 
-            {
-
-                waypoints.map((point,index)=>(
-
-                    <CircleMarker
-
-                        key={point.id}
-
-                        center={[
-
-                            point.lat,
-
-                            point.lng
-
-                        ]}
-
-                        radius={
-
-                            currentWaypoint===index
-
-                            ?10
-
-                            :7
-
+            {waypoints.map((point, index) => (
+                <Marker
+                    key={point.id || index}
+                    position={[point.lat, point.lng]}
+                    draggable={!missionStarted}
+                    eventHandlers={{
+                        dragend: (e) => {
+                            const marker = e.target;
+                            const pos = marker.getLatLng();
+                            updateWaypoint(index, pos.lat, pos.lng);
                         }
-
-                        pathOptions={{
-
-                            color:
-
-                            currentWaypoint===index
-
-                            ?"yellow"
-
-                            :"cyan",
-
-                            fillColor:
-
-                            currentWaypoint===index
-
-                            ?"yellow"
-
-                            :"#00d9ff",
-
-                            fillOpacity:1
-
-                        }}
-
-                    >
-
-                        <Popup>
-
-                            <b>
-
-                                Waypoint {index+1}
-
-                            </b>
-
-                            <br/>
-
-                            Latitude :
-
-                            {" "}
-
-                            {point.lat.toFixed(6)}
-
-                            <br/>
-
-                            Longitude :
-
-                            {" "}
-
-                            {point.lng.toFixed(6)}
-
-                        </Popup>
-
-                    </CircleMarker>
-
-                ))
-
-            }
+                    }}
+                    icon={createWaypointIcon(index + 1, currentWaypoint === index)}
+                >
+                    <Popup>
+                        <div style={{ textAlign: "center", minWidth: "130px" }}>
+                            <b style={{ color: "#00d9ff", fontSize: "13px" }}>📍 Waypoint #{index + 1}</b>
+                            <hr style={{ borderColor: "rgba(255,42,75,0.3)", margin: "4px 0" }} />
+                            <div style={{ fontSize: "11px", color: "#333" }}>
+                                <b>Lat:</b> {point.lat.toFixed(6)}
+                                <br />
+                                <b>Lng:</b> {point.lng.toFixed(6)}
+                            </div>
+                            {!missionStarted && (
+                                <button
+                                    onClick={() => removeWaypoint(index)}
+                                    style={{
+                                        marginTop: "8px",
+                                        background: "#ff2a4b",
+                                        color: "#fff",
+                                        border: "none",
+                                        borderRadius: "6px",
+                                        padding: "4px 10px",
+                                        fontSize: "11px",
+                                        fontWeight: "bold",
+                                        cursor: "pointer",
+                                        width: "100%"
+                                    }}
+                                >
+                                    🗑 Delete Waypoint
+                                </button>
+                            )}
+                        </div>
+                    </Popup>
+                </Marker>
+            ))}
 
             {/* ==========================================
                     ROUTE
@@ -655,6 +651,23 @@ export default function InteractiveMap(){
         onClick={clearWaypoints}
     >
         🗑 Clear
+    </button>
+    <button
+        onClick={optimizeRoute}
+        disabled={missionStarted || waypoints.length < 2}
+        style={{
+            background: "rgba(0, 217, 255, 0.15)",
+            color: "#00d9ff",
+            border: "1px solid rgba(0, 217, 255, 0.4)",
+            borderRadius: "10px",
+            padding: "10px",
+            cursor: missionStarted || waypoints.length < 2 ? "not-allowed" : "pointer",
+            fontWeight: "bold",
+            opacity: missionStarted || waypoints.length < 2 ? 0.5 : 1
+        }}
+        title="Optional: Sort waypoints by nearest distance"
+    >
+        ⚡ Auto-Sort Order
     </button>
     <button className="btn-relocate" onClick={handleRelocate} style={{ background: "linear-gradient(135deg, #e74c3c, #c0392b)", color: "white", padding: "10px", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "bold" }}>
         📍 Relocate Bot
