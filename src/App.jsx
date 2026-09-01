@@ -9,7 +9,6 @@ import ImageAnalysis from "./pages/ImageAnalysis";
 import History from "./pages/History";
 import NotificationListener from "./components/NotificationListener";
 import AnimatedBackground from "./components/AnimatedBackground";
-import Bot3DGuide from "./components/Bot3DGuide";
 
 // Simple auth wrapper (can be expanded later)
 const ProtectedRoute = ({ children }) => {
@@ -25,7 +24,6 @@ function App() {
     <BrowserRouter>
       <AnimatedBackground />
       <NotificationListener />
-      <Bot3DGuide />
       <Routes>
         <Route path="/" element={<Splash />} />
         <Route path="/main" element={<Main />} />
