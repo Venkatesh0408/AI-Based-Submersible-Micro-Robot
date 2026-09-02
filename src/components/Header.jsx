@@ -32,8 +32,8 @@ export default function Header() {
   return (
     <header className="header">
       <div className="header-left">
-        <div className="logo-box">
-          🤖
+        <div className="logo-box bg-white p-1 border border-red-500/40 shadow-sm overflow-hidden flex items-center justify-center">
+          <img src="/rrce-logo.jpg" alt="RRCE College Logo" className="w-full h-full object-contain rounded-md" />
         </div>
         <div>
           <h1>

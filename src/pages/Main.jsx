@@ -35,70 +35,6 @@ export default function Main() {
         }
     };
 
-    const [collegeLogo, setCollegeLogo] = useState(() => {
-        return localStorage.getItem('collegeLogo_v3') || "/rrce-official-logo.svg";
-    });
-
-    useEffect(() => {
-        const storedLogo = localStorage.getItem('collegeLogo_v3');
-        if (storedLogo) {
-            setCollegeLogo(storedLogo);
-        }
-        
-        fetch('/api/settings')
-            .then(res => {
-                if (!res.ok) return null;
-                const contentType = res.headers.get("content-type") || "";
-                if (!contentType.includes("application/json")) return null;
-                return res.text();
-            })
-            .then(text => {
-                if (!text || text.trim().startsWith("<")) return;
-                const data = JSON.parse(text);
-                if (data && data.success && data.settings?.collegeLogo) {
-                    setCollegeLogo(data.settings.collegeLogo);
-                    try {
-                        localStorage.setItem('collegeLogo_v3', data.settings.collegeLogo);
-                    } catch (e) {}
-                }
-            })
-            .catch(err => console.error("Failed to fetch settings:", err));
-
-        const handleLogoUpdated = (e) => {
-            if (e.detail?.logoUrl) {
-                setCollegeLogo(e.detail.logoUrl);
-                try {
-                    localStorage.setItem('collegeLogo_v3', e.detail.logoUrl);
-                } catch (e) {}
-            }
-        };
-        window.addEventListener('logoUpdated', handleLogoUpdated);
-        return () => window.removeEventListener('logoUpdated', handleLogoUpdated);
-    }, []);
-
-    const handleLogoUpload = (e) => {
-        const file = e.target.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                const base64 = reader.result;
-                setCollegeLogo(base64);
-                try {
-                    localStorage.setItem('collegeLogo_v3', base64);
-                } catch (e) {
-                    console.warn('Could not save logo to localStorage (might be too large)', e);
-                }
-                
-                fetch('/api/settings/logo', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ imageBase64: base64 })
-                }).catch(err => console.error('Logo upload failed:', err));
-            };
-            reader.readAsDataURL(file);
-        }
-    };
-
     const [guidePhoto, setGuidePhoto] = useState(null);
 
     useEffect(() => {
@@ -192,30 +128,14 @@ export default function Main() {
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-5 sm:gap-8 p-6 sm:p-8 relative overflow-hidden text-center sm:text-left" style={panelStyle}>
                     <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ background: 'linear-gradient(180deg, rgba(255,42,75,0.2), transparent)' }}></div>
                     
-                    <label className="w-28 h-28 sm:w-36 sm:h-36 bg-white rounded-full flex items-center justify-center p-3 z-10 relative shadow-[0_0_30px_rgba(255,42,75,0.35)] border-4 border-red-500/70 hover:border-red-400 cursor-pointer group transition-all duration-300 shrink-0 overflow-hidden">
+                    <div className="w-28 h-28 sm:w-36 sm:h-36 bg-white rounded-full flex items-center justify-center p-1 sm:p-2 z-10 relative shadow-[0_0_30px_rgba(255,42,75,0.4)] border-2 border-red-500/70 shrink-0 overflow-hidden">
                         <img 
-                            src={collegeLogo} 
+                            src="/rrce-logo.jpg" 
                             alt="College Logo" 
                             className="w-full h-full object-contain rounded-full" 
                             style={{ imageRendering: 'high-quality' }}
-                            onError={(e) => { 
-                                if (e.target.src !== "/rrce-official-logo.svg") {
-                                    e.target.src = "/rrce-official-logo.svg";
-                                }
-                            }} 
                         />
-                        <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center rounded-full transition-all duration-300 backdrop-blur-xs p-2 text-center pointer-events-none">
-                            <span className="text-red-400 text-lg mb-1">📷</span>
-                            <span className="text-[10px] text-white font-bold uppercase tracking-wider leading-tight">Upload Logo</span>
-                        </div>
-                        <input 
-                            type="file" 
-                            accept="image/*" 
-                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20" 
-                            onChange={handleLogoUpload} 
-                            title="Click to upload custom logo"
-                        />
-                    </label>
+                    </div>
                     
                     <div className="text-center sm:text-left flex flex-col items-center sm:items-start justify-center z-10">
                         <h2 className="text-xl sm:text-2xl md:text-3xl font-black text-white tracking-wide uppercase drop-shadow-lg mb-2 text-center sm:text-left break-words">

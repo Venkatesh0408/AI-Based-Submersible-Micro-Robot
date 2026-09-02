@@ -2,7 +2,14 @@ const BASE_URL = "";
 
 export async function safeFetchJson(url, options = {}) {
     try {
-        const res = await fetch(url, options);
+        const token = localStorage.getItem('token');
+        const headers = {
+            ...(options.headers || {})
+        };
+        if (token && !headers['Authorization']) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
+        const res = await fetch(url, { ...options, headers });
         if (!res.ok) {
             return null;
         }

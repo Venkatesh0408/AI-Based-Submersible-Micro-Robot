@@ -397,6 +397,17 @@ app.get("/api/health", (req, res) => {
   ]);
 });
 
+app.get("/api/status", (req, res) => {
+  res.json({
+    status: robotState.status,
+    mode: robotState.mode,
+    running: robotState.running,
+    emergency: robotState.emergency,
+    battery: parseFloat(robotState.battery.toFixed(1)),
+    signal: parseFloat(robotState.signal.toFixed(1))
+  });
+});
+
 app.get("/api/mission", (req, res) => {
   res.json({
     name: robotState.mission_name,
@@ -652,39 +663,9 @@ app.post("/api/home", (req, res) => {
 });
 
 // App Settings API for global persistence
-app.post("/api/settings/logo", (req, res) => {
-  const { imageBase64 } = req.body;
-  if (!imageBase64) return res.status(400).json({ success: false, message: "No image provided" });
-  
-  try {
-    const parts = imageBase64.split(';base64,');
-    if (parts.length !== 2) return res.status(400).json({ success: false, message: "Invalid base64 format" });
-    
-    const ext = parts[0].split('/')[1] || 'png';
-    const buffer = Buffer.from(parts[1], 'base64');
-    const filename = 'custom-college-logo.' + ext;
-    fsLib.writeFileSync(path.join(process.cwd(), 'public', filename), buffer);
-    
-    const settingsPath = path.join(process.cwd(), 'app_settings.json');
-    let settings: any = {};
-    if (fsLib.existsSync(settingsPath)) {
-        try { settings = JSON.parse(fsLib.readFileSync(settingsPath, 'utf8')); } catch(e) {}
-    }
-    settings.collegeLogo = '/' + filename + '?t=' + Date.now();
-    fsLib.writeFileSync(settingsPath, JSON.stringify(settings, null, 2));
-    
-    // Notify connected clients to refresh logo
-    notifyClients({ type: "LOGO_UPDATED", logoUrl: settings.collegeLogo });
-    
-    res.json({ success: true, logoUrl: settings.collegeLogo });
-  } catch (e) {
-    res.status(500).json({ success: false, message: e.message });
-  }
-});
-
 app.get("/api/settings", (req, res) => {
   const settingsPath = path.join(process.cwd(), 'app_settings.json');
-  let settings = { collegeLogo: "/rrce-official-logo.svg" };
+  let settings = { collegeLogo: "/rrce-logo.jpg" };
   if (fsLib.existsSync(settingsPath)) {
       try { 
           const fileSettings = JSON.parse(fsLib.readFileSync(settingsPath, 'utf8')); 
@@ -1483,6 +1464,7 @@ app.use((err, req, res, next) => {
 });
 
 async function startServer() {
+  app.use(express.static(path.join(process.cwd(), "public")));
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
       server: { middlewareMode: true },
